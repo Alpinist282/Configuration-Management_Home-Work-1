@@ -2,7 +2,7 @@ import os
 import sys
 import tarfile
 from io import BytesIO
-from pathlib import Path
+from pathlib import PurePosixPath
 from typing import List
 
 class EmulatorShell:
@@ -50,13 +50,24 @@ class EmulatorShell:
             for member in members:
                 print(member.name)
     
-    def cd(self, dir: str):
+    def cd(self, directory: str):
         """Переход в другую директорию."""
-        if dir.startswith("/"):
-            self.current_dir = dir
+        # Разбираем путь на составляющие
+        target_path = PurePosixPath(directory)
+
+        # Если путь начинается с '/', то это абсолютный путь
+        if target_path.is_absolute():
+            new_path = target_path
         else:
-            self.current_dir += "/" + dir
-        print(f"Текущая директория: {self.current_dir}")
+            # Иначе добавляем текущий путь
+            new_path = PurePosixPath(self.current_dir) / target_path
+
+        # Проверяем существование директории
+        if any(m.name == f"vfs/{new_path}" for m in self.vfs_root.getmembers()):
+            self.current_dir = f"vfs/{new_path}"
+            print(f"Текущая директория: {self.current_dir}")
+        else:
+            print(f"Директория {directory} не найдена.")
     
     def exit(self):
         """Выход из эмулятора."""
